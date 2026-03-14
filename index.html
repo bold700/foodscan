@@ -319,8 +319,6 @@ let photoStream = null;
 let photoBase64 = null;
 let barcodeDetected = false;
 let quaggaRunning = false;
-let lastScannedCode = null;
-let scanConfirmCount = 0;
 
 function getApiConfig() {
   const apiKey = (typeof localStorage !== 'undefined' && localStorage.getItem(STORAGE_KEY)) || '';
@@ -433,8 +431,6 @@ function toggleBarcodeCamera() {
 
 async function openBarcodeCamera() {
   barcodeDetected = false;
-  lastScannedCode = null;
-  scanConfirmCount = 0;
   const box = document.getElementById('bc-cam-box');
   const video = document.getElementById('bc-video');
   const status = document.getElementById('bc-status');
@@ -491,20 +487,12 @@ function startQuagga(video) {
     if (barcodeDetected) return;
     var code = data.codeResult ? data.codeResult.code : null;
     if (!code || code.length < 8) return;
-    if (code === lastScannedCode) {
-      scanConfirmCount++;
-      if (scanConfirmCount >= 2) {
-        barcodeDetected = true;
-        document.getElementById('bc-status').textContent = 'Barcode gevonden: ' + code;
-        document.getElementById('bc-status').className = 'status-bar detecting';
-        document.getElementById('barcode-field').value = code;
-        stopBarcodeCamera();
-        analyzeBarcode();
-      }
-    } else {
-      lastScannedCode = code;
-      scanConfirmCount = 1;
-    }
+    barcodeDetected = true;
+    document.getElementById('bc-status').textContent = 'Barcode gevonden: ' + code;
+    document.getElementById('bc-status').className = 'status-bar detecting';
+    document.getElementById('barcode-field').value = code;
+    stopBarcodeCamera();
+    analyzeBarcode();
   });
 }
 
