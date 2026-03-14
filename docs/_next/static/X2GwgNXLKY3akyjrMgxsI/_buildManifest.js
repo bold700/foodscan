@@ -3,8 +3,8 @@ self.__BUILD_MANIFEST = {
     "afterFiles": [],
     "beforeFiles": [
       {
-        "source": "/foodscan-app//_next/:path+",
-        "destination": "/foodscan-app/_next/:path+"
+        "source": "/foodscan//_next/:path+",
+        "destination": "/foodscan/_next/:path+"
       }
     ],
     "fallback": []

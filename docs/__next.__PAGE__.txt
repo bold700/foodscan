@@ -1,7 +1,7 @@
 1:"$Sreact.fragment"
-2:I[79520,["/foodscan-app/_next/static/chunks/f7133ad4cdbb8fce.js"],""]
-3:I[76558,["/foodscan-app/_next/static/chunks/f7133ad4cdbb8fce.js"],"FoodscanApp"]
-4:I[97367,["/foodscan-app/_next/static/chunks/2f236954d6a65e12.js"],"OutletBoundary"]
+2:I[79520,["/foodscan/_next/static/chunks/f7133ad4cdbb8fce.js"],""]
+3:I[76558,["/foodscan/_next/static/chunks/f7133ad4cdbb8fce.js"],"FoodscanApp"]
+4:I[97367,["/foodscan/_next/static/chunks/2f236954d6a65e12.js"],"OutletBoundary"]
 5:"$Sreact.suspense"
-0:{"buildId":"VQqThZvT8DiciDiBRIgH6","rsc":["$","$1","c",{"children":[[["$","$L2",null,{"src":"https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js","strategy":"lazyOnload"}],["$","$L3",null,{}]],[["$","script","script-0",{"src":"/foodscan-app/_next/static/chunks/f7133ad4cdbb8fce.js","async":true}]],["$","$L4",null,{"children":["$","$5",null,{"name":"Next.MetadataOutlet","children":"$@6"}]}]]}],"loading":null,"isPartial":false}
+0:{"buildId":"X2GwgNXLKY3akyjrMgxsI","rsc":["$","$1","c",{"children":[[["$","$L2",null,{"src":"https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js","strategy":"lazyOnload"}],["$","$L3",null,{}]],[["$","script","script-0",{"src":"/foodscan/_next/static/chunks/f7133ad4cdbb8fce.js","async":true}]],["$","$L4",null,{"children":["$","$5",null,{"name":"Next.MetadataOutlet","children":"$@6"}]}]]}],"loading":null,"isPartial":false}
 6:null
