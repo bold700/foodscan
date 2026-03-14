@@ -1,0 +1,365 @@
+
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+.app { max-width: 390px; margin: 0 auto; min-height: 700px; background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: 20px; overflow: hidden; }
+.header { background: #1A1A1A; padding: 20px 20px 16px; color: white; }
+.logo { font-size: 22px; font-weight: 500; letter-spacing: -0.5px; }
+.logo span { color: #A8E063; }
+.tagline { font-size: 12px; color: rgba(255,255,255,0.5); margin-top: 3px; }
+.tabs { display: flex; border-bottom: 0.5px solid var(--color-border-tertiary); }
+.tab { flex: 1; padding: 12px; text-align: center; font-size: 13px; color: var(--color-text-secondary); cursor: pointer; border-bottom: 2px solid transparent; }
+.tab.active { color: var(--color-text-primary); border-bottom-color: #A8E063; font-weight: 500; }
+.content { padding: 16px; }
+
+.camera-container { position: relative; width: 100%; border-radius: 12px; overflow: hidden; background: #000; margin-bottom: 12px; }
+.camera-video { width: 100%; display: block; border-radius: 12px; }
+.camera-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; }
+.scan-frame { width: 70%; aspect-ratio: 3/1; border: 2px solid #A8E063; border-radius: 8px; box-shadow: 0 0 0 9999px rgba(0,0,0,0.45); }
+.scan-line { position: absolute; width: 66%; height: 2px; background: linear-gradient(90deg, transparent, #A8E063, transparent); animation: scanline 2s ease-in-out infinite; }
+@keyframes scanline { 0%,100% { top: 28%; } 50% { top: 68%; } }
+.photo-frame { width: 80%; aspect-ratio: 4/3; border: 2px solid #A8E063; border-radius: 8px; box-shadow: 0 0 0 9999px rgba(0,0,0,0.45); }
+
+.cam-btn-row { display: flex; gap: 8px; margin-bottom: 12px; }
+.cam-btn { flex: 1; padding: 11px; border: 0.5px solid var(--color-border-secondary); border-radius: 10px; font-size: 13px; font-weight: 500; cursor: pointer; background: var(--color-background-secondary); color: var(--color-text-primary); }
+.cam-btn.primary { background: #1A1A1A; color: white; border-color: #1A1A1A; }
+.cam-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.cam-btn:hover:not(:disabled) { background: var(--color-background-tertiary); }
+.cam-btn.primary:hover:not(:disabled) { background: #333; }
+
+.status-bar { font-size: 12px; color: var(--color-text-secondary); text-align: center; padding: 6px; min-height: 28px; }
+.status-bar.detecting { color: #3B6D11; }
+.status-bar.error { color: #A32D2D; }
+
+.or { text-align: center; font-size: 12px; color: var(--color-text-tertiary); margin: 8px 0; }
+.input-row { display: flex; gap: 8px; margin-bottom: 12px; }
+.barcode-input { flex: 1; padding: 10px 12px; font-size: 14px; border: 0.5px solid var(--color-border-secondary); border-radius: 10px; background: var(--color-background-primary); color: var(--color-text-primary); }
+.demo-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.demo-pill { padding: 5px 11px; border: 0.5px solid var(--color-border-secondary); border-radius: 20px; font-size: 12px; color: var(--color-text-secondary); cursor: pointer; background: var(--color-background-secondary); }
+.demo-pill:hover { border-color: #A8E063; color: var(--color-text-primary); }
+
+.result-card { border: 0.5px solid var(--color-border-tertiary); border-radius: 12px; overflow: hidden; margin-bottom: 12px; }
+.result-header { padding: 14px 16px; display: flex; align-items: center; gap: 12px; }
+.nova-badge { width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 500; flex-shrink: 0; }
+.nova-1 { background: #EAF3DE; color: #3B6D11; }
+.nova-2 { background: #FAEEDA; color: #854F0B; }
+.nova-3 { background: #FAEEDA; color: #BA7517; }
+.nova-4 { background: #FCEBEB; color: #A32D2D; }
+.result-name { font-size: 15px; font-weight: 500; color: var(--color-text-primary); }
+.result-brand { font-size: 12px; color: var(--color-text-secondary); margin-top: 2px; }
+.result-body { padding: 0 16px 16px; }
+.nova-label { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 500; margin-bottom: 10px; }
+.nova-label-1 { background: #EAF3DE; color: #3B6D11; }
+.nova-label-2 { background: #FAEEDA; color: #854F0B; }
+.nova-label-3 { background: #FAEEDA; color: #BA7517; }
+.nova-label-4 { background: #FCEBEB; color: #A32D2D; }
+.verdict { font-size: 13px; color: var(--color-text-secondary); line-height: 1.6; margin-bottom: 12px; }
+.alt-section { background: var(--color-background-secondary); border-radius: 10px; padding: 12px; }
+.alt-label { font-size: 11px; font-weight: 500; color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+.alt-item { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 0.5px solid var(--color-border-tertiary); }
+.alt-item:last-child { border-bottom: none; padding-bottom: 0; }
+.alt-name { font-size: 13px; font-weight: 500; color: var(--color-text-primary); }
+.alt-where { font-size: 11px; color: var(--color-text-secondary); margin-top: 2px; }
+.alt-nova { font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 10px; background: #EAF3DE; color: #3B6D11; }
+.loading { text-align: center; padding: 32px 20px; }
+.spinner { width: 28px; height: 28px; border: 2px solid var(--color-border-tertiary); border-top-color: #A8E063; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 10px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-text { font-size: 13px; color: var(--color-text-secondary); }
+.empty-state { text-align: center; padding: 32px 16px; color: var(--color-text-tertiary); font-size: 13px; }
+.captured-preview { width: 100%; border-radius: 10px; margin-bottom: 8px; }
+canvas#capture-canvas { display: none; }
+</style>
+
+<div class="app">
+  <div class="header">
+    <div class="logo">food<span>scan</span></div>
+    <div class="tagline">echt eten, echte keuzes</div>
+  </div>
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('barcode')">Barcode</div>
+    <div class="tab" onclick="switchTab('foto')">Ingrediënten</div>
+    <div class="tab" onclick="switchTab('history')">Recent</div>
+  </div>
+  <div class="content">
+
+    <div id="tab-barcode">
+      <div class="camera-container" id="bc-cam-box" style="display:none">
+        <video id="bc-video" class="camera-video" autoplay playsinline muted></video>
+        <div class="camera-overlay"><div class="scan-frame"></div><div class="scan-line"></div></div>
+      </div>
+      <div class="cam-btn-row">
+        <button class="cam-btn primary" id="bc-cam-btn" onclick="toggleBarcodeCamera()">Camera openen</button>
+        <button class="cam-btn" id="bc-stop-btn" onclick="stopBarcodeCamera()" style="display:none">Stop camera</button>
+      </div>
+      <div class="status-bar" id="bc-status">Of typ barcode hieronder</div>
+      <div class="or">— of —</div>
+      <div class="input-row">
+        <input class="barcode-input" id="barcode-field" placeholder="bv. 8718309228874" type="number" />
+        <button class="cam-btn primary" style="flex:0;padding:10px 14px;font-size:13px" onclick="analyzeBarcode()">Zoek</button>
+      </div>
+      <div style="margin-bottom:8px;font-size:12px;color:var(--color-text-secondary)">Probeer een voorbeeld:</div>
+      <div class="demo-pills">
+        <div class="demo-pill" onclick="loadDemo('8718309228874')">Nutella</div>
+        <div class="demo-pill" onclick="loadDemo('8710400241752')">Activia</div>
+        <div class="demo-pill" onclick="loadDemo('3017620422003')">Lay's</div>
+        <div class="demo-pill" onclick="loadDemo('8718906539853')">Hagelslag</div>
+      </div>
+      <div id="barcode-result"></div>
+    </div>
+
+    <div id="tab-foto" style="display:none">
+      <div class="camera-container" id="photo-cam-box" style="display:none">
+        <video id="photo-video" class="camera-video" autoplay playsinline muted></video>
+        <div class="camera-overlay"><div class="photo-frame"></div></div>
+      </div>
+      <img id="captured-img" class="captured-preview" style="display:none" />
+      <canvas id="capture-canvas"></canvas>
+      <div class="cam-btn-row" id="photo-btn-row">
+        <button class="cam-btn primary" id="photo-cam-btn" onclick="openPhotoCamera()">Camera openen</button>
+        <button class="cam-btn" onclick="document.getElementById('file-input').click()">Uit galerij</button>
+      </div>
+      <div class="cam-btn-row" id="photo-shoot-row" style="display:none">
+        <button class="cam-btn primary" onclick="capturePhoto()">Maak foto</button>
+        <button class="cam-btn" onclick="stopPhotoCamera()">Annuleer</button>
+      </div>
+      <div class="cam-btn-row" id="photo-analyze-row" style="display:none">
+        <button class="cam-btn primary" onclick="analyzePhoto()">Analyseer</button>
+        <button class="cam-btn" onclick="retakePhoto()">Opnieuw</button>
+      </div>
+      <input type="file" id="file-input" accept="image/*" style="display:none" onchange="handleFileUpload(this)" />
+      <div id="photo-result"></div>
+    </div>
+
+    <div id="tab-history" style="display:none">
+      <div id="history-list"><div class="empty-state">Nog geen producten gescand</div></div>
+    </div>
+
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
+<script>
+let currentTab = 'barcode';
+let history = [];
+let bcStream = null;
+let photoStream = null;
+let photoBase64 = null;
+let barcodeDetected = false;
+let quaggaRunning = false;
+
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', ['barcode','foto','history'][i] === tab));
+  ['barcode','foto','history'].forEach(id => document.getElementById('tab-'+id).style.display = id === tab ? 'block' : 'none');
+  if (tab !== 'barcode') stopBarcodeCamera();
+  if (tab !== 'foto') stopPhotoCamera();
+  if (tab === 'history') renderHistory();
+}
+
+function toggleBarcodeCamera() {
+  if (bcStream) { stopBarcodeCamera(); return; }
+  openBarcodeCamera();
+}
+
+async function openBarcodeCamera() {
+  barcodeDetected = false;
+  const box = document.getElementById('bc-cam-box');
+  const video = document.getElementById('bc-video');
+  const status = document.getElementById('bc-status');
+  try {
+    bcStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    video.srcObject = bcStream;
+    box.style.display = 'block';
+    document.getElementById('bc-cam-btn').textContent = 'Camera actief';
+    document.getElementById('bc-stop-btn').style.display = 'block';
+    status.textContent = 'Richt op een barcode...';
+    status.className = 'status-bar detecting';
+    video.onloadedmetadata = () => startQuagga(video);
+  } catch(e) {
+    status.textContent = 'Camera niet beschikbaar. Typ barcode hieronder.';
+    status.className = 'status-bar error';
+  }
+}
+
+function startQuagga(video) {
+  if (quaggaRunning) return;
+  quaggaRunning = true;
+  Quagga.init({
+    inputStream: { type: 'LiveStream', target: video, constraints: { facingMode: 'environment' } },
+    decoder: { readers: ['ean_reader','ean_8_reader','code_128_reader','upc_reader'] },
+    locate: true
+  }, err => {
+    if (!err) Quagga.start();
+  });
+  Quagga.onDetected(data => {
+    if (barcodeDetected) return;
+    const code = data.codeResult.code;
+    if (code && code.length >= 8) {
+      barcodeDetected = true;
+      const status = document.getElementById('bc-status');
+      status.textContent = 'Barcode gevonden: ' + code;
+      status.className = 'status-bar detecting';
+      document.getElementById('barcode-field').value = code;
+      stopBarcodeCamera();
+      analyzeBarcode();
+    }
+  });
+}
+
+function stopBarcodeCamera() {
+  if (quaggaRunning) { try { Quagga.stop(); } catch(e) {} quaggaRunning = false; }
+  if (bcStream) { bcStream.getTracks().forEach(t => t.stop()); bcStream = null; }
+  document.getElementById('bc-cam-box').style.display = 'none';
+  document.getElementById('bc-cam-btn').textContent = 'Camera openen';
+  document.getElementById('bc-stop-btn').style.display = 'none';
+  if (!barcodeDetected) {
+    document.getElementById('bc-status').textContent = 'Of typ barcode hieronder';
+    document.getElementById('bc-status').className = 'status-bar';
+  }
+}
+
+async function openPhotoCamera() {
+  const box = document.getElementById('photo-cam-box');
+  const video = document.getElementById('photo-video');
+  try {
+    photoStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    video.srcObject = photoStream;
+    box.style.display = 'block';
+    document.getElementById('photo-btn-row').style.display = 'none';
+    document.getElementById('photo-shoot-row').style.display = 'flex';
+    document.getElementById('photo-analyze-row').style.display = 'none';
+    document.getElementById('captured-img').style.display = 'none';
+  } catch(e) {
+    document.getElementById('photo-result').innerHTML = '<div class="empty-state">Camera niet beschikbaar. Gebruik "Uit galerij".</div>';
+  }
+}
+
+function capturePhoto() {
+  const video = document.getElementById('photo-video');
+  const canvas = document.getElementById('capture-canvas');
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  canvas.getContext('2d').drawImage(video, 0, 0);
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+  photoBase64 = dataUrl.split(',')[1];
+  const img = document.getElementById('captured-img');
+  img.src = dataUrl;
+  img.style.display = 'block';
+  stopPhotoCamera(true);
+  document.getElementById('photo-btn-row').style.display = 'none';
+  document.getElementById('photo-shoot-row').style.display = 'none';
+  document.getElementById('photo-analyze-row').style.display = 'flex';
+}
+
+function stopPhotoCamera(keepPreview) {
+  if (photoStream) { photoStream.getTracks().forEach(t => t.stop()); photoStream = null; }
+  document.getElementById('photo-cam-box').style.display = 'none';
+  if (!keepPreview) {
+    document.getElementById('photo-btn-row').style.display = 'flex';
+    document.getElementById('photo-shoot-row').style.display = 'none';
+    document.getElementById('photo-analyze-row').style.display = 'none';
+  }
+}
+
+function retakePhoto() {
+  photoBase64 = null;
+  document.getElementById('captured-img').style.display = 'none';
+  document.getElementById('photo-result').innerHTML = '';
+  document.getElementById('photo-btn-row').style.display = 'flex';
+  document.getElementById('photo-shoot-row').style.display = 'none';
+  document.getElementById('photo-analyze-row').style.display = 'none';
+}
+
+function handleFileUpload(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    photoBase64 = e.target.result.split(',')[1];
+    const img = document.getElementById('captured-img');
+    img.src = e.target.result;
+    img.style.display = 'block';
+    document.getElementById('photo-btn-row').style.display = 'none';
+    document.getElementById('photo-analyze-row').style.display = 'flex';
+  };
+  reader.readAsDataURL(file);
+}
+
+function loadDemo(barcode) {
+  document.getElementById('barcode-field').value = barcode;
+  analyzeBarcode();
+}
+
+async function analyzeBarcode() {
+  const barcode = document.getElementById('barcode-field').value.trim();
+  if (!barcode) return;
+  const el = document.getElementById('barcode-result');
+  el.innerHTML = `<div class="loading"><div class="spinner"></div><div class="loading-text">Product opzoeken...</div></div>`;
+  let productData = null;
+  try {
+    const r = await fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`);
+    const d = await r.json();
+    if (d.status === 1) productData = d.product;
+  } catch(e) {}
+  const name = productData ? (productData.product_name_nl || productData.product_name || 'Onbekend') : 'Onbekend';
+  const brand = productData ? (productData.brands || '') : '';
+  const ingredients = productData ? (productData.ingredients_text_nl || productData.ingredients_text || '') : '';
+  const nova = productData ? (productData.nova_group || '') : '';
+  const prompt = productData
+    ? `Analyseer dit voedingsproduct voor een Nederlandse consument:\nProduct: ${name}\nMerk: ${brand}\nIngrediënten: ${ingredients}\nNOVA: ${nova}\n\nGeef ALLEEN JSON (geen markdown):\n{"naam":"...","merk":"...","nova":1-4,"nova_label":"Onbewerkt/Licht bewerkt/Bewerkt/Ultrabewerkt","oordeel":"2-3 zinnen eerlijk oordeel","alternatieven":[{"naam":"...","waar":"AH/Jumbo/online","nova":1}]}`
+    : `Barcode ${barcode} niet gevonden. JSON:\n{"naam":"Onbekend product","merk":"","nova":null,"nova_label":"Niet gevonden","oordeel":"Product niet gevonden in database. Probeer de ingrediënten-tab.","alternatieven":[]}`;
+  el.innerHTML = `<div class="loading"><div class="spinner"></div><div class="loading-text">Claude analyseert...</div></div>`;
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 1000, messages: [{ role: 'user', content: prompt }] })
+    });
+    const data = await resp.json();
+    const text = data.content.map(i => i.text || '').join('');
+    const result = JSON.parse(text.replace(/```json|```/g, '').trim());
+    history.unshift({ type: 'barcode', barcode, result, time: new Date() });
+    el.innerHTML = renderResult(result);
+  } catch(e) {
+    el.innerHTML = `<div class="empty-state">Fout bij analyseren. Probeer opnieuw.</div>`;
+  }
+}
+
+async function analyzePhoto() {
+  if (!photoBase64) return;
+  const el = document.getElementById('photo-result');
+  el.innerHTML = `<div class="loading"><div class="spinner"></div><div class="loading-text">Ingrediënten lezen...</div></div>`;
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{ role: 'user', content: [
+          { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: photoBase64 } },
+          { type: 'text', text: `Lees de ingrediëntenlijst en analyseer het product (NOVA 1=onbewerkt, 4=ultrabewerkt). Geef ALLEEN JSON:\n{"naam":"...","merk":"...","nova":1-4,"nova_label":"...","oordeel":"2-3 zinnen","alternatieven":[{"naam":"...","waar":"AH/Jumbo/online","nova":1}]}` }
+        ]}]
+      })
+    });
+    const data = await resp.json();
+    const text = data.content.map(i => i.text || '').join('');
+    const result = JSON.parse(text.replace(/```json|```/g, '').trim());
+    history.unshift({ type: 'foto', result, time: new Date() });
+    el.innerHTML = renderResult(result);
+  } catch(e) {
+    el.innerHTML = `<div class="empty-state">Kon afbeelding niet analyseren. Zorg dat de ingrediëntenlijst goed zichtbaar is.</div>`;
+  }
+}
+
+function renderResult(r) {
+  const nova = r.nova || 4;
+  const alts = (r.alternatieven || []).map(a => `<div class="alt-item"><div><div class="alt-name">${a.naam}</div><div class="alt-where">${a.waar}</div></div><div class="alt-nova">NOVA ${a.nova}</div></div>`).join('');
+  return `<div class="result-card"><div class="result-header"><div class="nova-badge nova-${nova}">${nova || '?'}</div><div><div class="result-name">${r.naam || 'Onbekend'}</div><div class="result-brand">${r.merk || ''}</div></div></div><div class="result-body"><span class="nova-label nova-label-${nova}">${r.nova_label || ''}</span><div class="verdict">${r.oordeel || ''}</div>${alts ? `<div class="alt-section"><div class="alt-label">Gezonde alternatieven</div>${alts}</div>` : ''}</div></div>`;
+}
+
+function renderHistory() {
+  const el = document.getElementById('history-list');
+  if (!history.length) { el.innerHTML = '<div class="empty-state">Nog geen producten gescand</div>'; return; }
+  el.innerHTML = history.map(h => `<div style="margin-bottom:12px;padding-bottom:12px;border-bottom:0.5px solid var(--color-border-tertiary)"><div style="font-size:11px;color:var(--color-text-tertiary);margin-bottom:6px">${h.time.toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'})}</div>${renderResult(h.result)}</div>`).join('');
+}
+</script>
