@@ -1,9 +1,81 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import type { AnalysisResult } from "@/lib/analyze";
+import { fetchProductImageByName } from "@/lib/analyze";
 import { getSearchUrl } from "@/lib/search-links";
 import { cn } from "@/lib/utils";
+
+function AlternativeItem({
+  naam,
+  waar,
+  nova,
+}: {
+  naam: string;
+  waar: string;
+  nova: number;
+}) {
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [imageFailed, setImageFailed] = useState(false);
+  const searchUrl = getSearchUrl(naam, waar);
+
+  useEffect(() => {
+    let cancelled = false;
+    setImageUrl(null);
+    setImageFailed(false);
+    fetchProductImageByName(naam).then((url) => {
+      if (!cancelled && url) setImageUrl(url);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [naam]);
+
+  return (
+    <li className="flex items-center gap-3 border-b border-border/50 py-2 last:border-0">
+      <div className="h-14 w-14 shrink-0 overflow-hidden rounded-lg border border-border bg-muted">
+        {imageUrl && !imageFailed ? (
+          <img
+            src={imageUrl}
+            alt=""
+            className="h-full w-full object-cover"
+            loading="lazy"
+            referrerPolicy="no-referrer"
+            onError={() => {
+              if (imageUrl.includes("allorigins.win")) {
+                setImageFailed(true);
+              } else {
+                setImageUrl(`https://api.allorigins.win/raw?url=${encodeURIComponent(imageUrl)}`);
+              }
+            }}
+          />
+        ) : (
+          <div className="h-full w-full bg-muted/80" title="Geen productfoto beschikbaar" aria-hidden />
+        )}
+      </div>
+      <div className="min-w-0 flex-1">
+        {searchUrl ? (
+          <a
+            href={searchUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm font-medium text-primary underline-offset-4 hover:underline"
+          >
+            {naam}
+            <span className="ml-1 inline-block text-xs">→</span>
+          </a>
+        ) : (
+          <p className="text-sm font-medium text-foreground">{naam}</p>
+        )}
+        <p className="text-xs text-muted-foreground">{waar}</p>
+      </div>
+      <span className="shrink-0 rounded bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300">
+        NOVA {nova}
+      </span>
+    </li>
+  );
+}
 
 const novaColors: Record<number, string> = {
   1: "bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800",
@@ -49,32 +121,15 @@ export function ResultCard({ result }: { result: AnalysisResult }) {
             <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
               Gezonde alternatieven
             </p>
-            <ul className="space-y-2">
-              {result.alternatieven.map((alt, i) => {
-                const searchUrl = getSearchUrl(alt.naam, alt.waar);
-                return (
-                  <li key={i} className="flex items-center justify-between gap-2 border-b border-border/50 py-2 last:border-0">
-                    <div className="min-w-0 flex-1">
-                      {searchUrl ? (
-                        <a
-                          href={searchUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-sm font-medium text-primary underline-offset-4 hover:underline"
-                        >
-                          {alt.naam}
-                        </a>
-                      ) : (
-                        <p className="text-sm font-medium text-foreground">{alt.naam}</p>
-                      )}
-                      <p className="text-xs text-muted-foreground">{alt.waar}</p>
-                    </div>
-                    <span className="shrink-0 rounded bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300">
-                      NOVA {alt.nova}
-                    </span>
-                  </li>
-                );
-              })}
+            <ul className="space-y-0">
+              {result.alternatieven.map((alt, i) => (
+                <AlternativeItem
+                  key={i}
+                  naam={alt.naam}
+                  waar={alt.waar}
+                  nova={alt.nova}
+                />
+              ))}
             </ul>
           </div>
         ) : null}

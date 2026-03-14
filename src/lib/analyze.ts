@@ -147,3 +147,61 @@ export async function fetchProductByBarcode(barcode: string): Promise<{
     nova: p.nova_group ?? "",
   };
 }
+
+const OFF_HEADERS = {
+  Accept: "application/json",
+  "User-Agent": "FoodscanApp/1.0 (https://github.com/bold700/foodscan)",
+};
+
+function parseOffSearchResponse(d: unknown): string | null {
+  const products = (d as { products?: unknown[] })?.products;
+  if (!Array.isArray(products) || products.length === 0) return null;
+  for (const product of products) {
+    const p = product as { image_small_url?: string; image_front_small_url?: string };
+    const img = p?.image_small_url || p?.image_front_small_url;
+    if (img && img.startsWith("http")) return img;
+  }
+  return null;
+}
+
+/** Haalt JSON op via URL; probeert eerst proxy (werkt o.a. op GitHub Pages), anders direct. */
+async function fetchJson(url: string): Promise<unknown> {
+  const proxies = [
+    `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+    `https://corsproxy.io/?${encodeURIComponent(url)}`,
+  ];
+  for (const proxyUrl of proxies) {
+    try {
+      const r = await fetch(proxyUrl, { signal: AbortSignal.timeout(8000) });
+      if (r.ok) return await r.json();
+    } catch {
+      continue;
+    }
+  }
+  try {
+    const r = await fetch(url, { headers: OFF_HEADERS, signal: AbortSignal.timeout(6000) });
+    if (r.ok) return await r.json();
+  } catch {
+    // ignore
+  }
+  return null;
+}
+
+/** Zoekt product op naam bij Open Food Facts en geeft image-URL van eerste hit (voor alternatieven). */
+export async function fetchProductImageByName(productName: string): Promise<string | null> {
+  const raw = productName.trim().replace(/\s*[-–—]\s*.*$/, "").slice(0, 50);
+  const words = raw.split(/\s+/).filter((w) => w.length >= 2);
+  const queries = [raw];
+  if (words.length > 2) queries.push(words.slice(0, 3).join(" "));
+  if (words.length > 1) queries.push(words.slice(0, 2).join(" "));
+  if (words.length >= 1 && words[0].length >= 3) queries.push(words[0]);
+
+  for (const query of queries) {
+    const q = encodeURIComponent(query);
+    const url = `https://world.openfoodfacts.org/api/v2/search?search_terms=${q}&fields=image_small_url,image_front_small_url,product_name&page_size=8`;
+    const d = await fetchJson(url);
+    const img = parseOffSearchResponse(d);
+    if (img) return img;
+  }
+  return null;
+}
