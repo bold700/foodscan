@@ -17,10 +17,10 @@ De app wordt als **statische site** geëxporteerd en werkt op GitHub Pages.
 
 ### 1. Build
 
-**Projectpagina** (URL: `username.github.io/foodscan-app/`):
+**Projectpagina** (URL: `username.github.io/foodscan/`):
 
 ```bash
-NEXT_PUBLIC_BASE_PATH=/foodscan-app npm run build
+NEXT_PUBLIC_BASE_PATH=/foodscan npm run build
 ```
 
 **Gebruikerspagina** (URL: `username.github.io`):
@@ -40,4 +40,4 @@ Het bestand `public/.nojekyll` wordt meegekopieerd zodat GitHub de map `_next` n
 
 ### 3. Base path
 
-Als je site op een subpad staat (bijv. `/foodscan-app/`), moet je bij de build `NEXT_PUBLIC_BASE_PATH` zetten op dat pad, anders laden CSS en JS niet.
+Als je site op een subpad staat (bijv. `/foodscan/`), moet je bij de build `NEXT_PUBLIC_BASE_PATH` zetten op dat pad, anders laden CSS en JS niet.
