@@ -1,25 +1,43 @@
 # foodscan
 
-**echt eten, echte keuzes** — Scan een barcode of foto van de ingrediëntenlijst en krijg een eerlijk oordeel met NOVA-classificatie en gezondere alternatieven.
+Echt eten, echte keuzes – scan een barcode of foto van ingrediënten en krijg een eerlijk oordeel met NOVA en gezondere alternatieven.
 
-## Live testen (GitHub Pages)
+## Lokaal draaien
 
-1. Ga in deze repo naar **Settings** → **Pages**.
-2. Bij **Source** kies je **Deploy from a branch**.
-3. Bij **Branch** kies je **main** en map **/ (root)**.
-4. Klik op **Save**. Na een paar minuten staat de app online.
+```bash
+npm install
+npm run dev
+```
 
-**URL:** `https://bold700.github.io/foodscan/`
+Open [http://localhost:3000](http://localhost:3000). Vul in Instellingen (⚙) je OpenAI- of Anthropic-API-key in.
 
-## Gebruik
+## GitHub Pages
 
-- Voeg in de app je eigen **API-key** toe (⚙ Instellingen): OpenAI of Anthropic. De key wordt alleen lokaal opgeslagen.
-- **Barcode:** camera of handmatig invullen; product wordt opgezocht bij Open Food Facts en geanalyseerd.
-- **Ingrediënten:** maak een foto van de ingrediëntenlijst of upload een afbeelding voor analyse.
-- **Recent:** overzicht van eerder gescande producten (in deze sessie).
+De app wordt als **statische site** geëxporteerd en werkt op GitHub Pages.
 
-## Techniek
+### 1. Build
 
-- Eén HTML-bestand (`index.html`), geen buildstap.
-- Open Food Facts API voor productdata, OpenAI of Claude voor analyse.
-- Werkt op mobiel en desktop; responsive layout.
+**Projectpagina** (URL: `username.github.io/foodscan-app/`):
+
+```bash
+NEXT_PUBLIC_BASE_PATH=/foodscan-app npm run build
+```
+
+**Gebruikerspagina** (URL: `username.github.io`):
+
+```bash
+npm run build
+```
+
+De output staat in de map **`out`**.
+
+### 2. Deployen
+
+- **Optie A:** In je repo onder **Settings → Pages** kies je “Deploy from a branch”. Kies de branch waar de inhoud van `out` staat (bijv. `gh-pages` of `main`), en als map **`/ (root)`** of **`/docs`** (als je `out` in `docs` kopieert).
+- **Optie B:** Push de inhoud van `out` naar een branch `gh-pages` en zet Pages op die branch.
+
+Het bestand `public/.nojekyll` wordt meegekopieerd zodat GitHub de map `_next` niet door Jekyll laat negeren.
+
+### 3. Base path
+
+Als je site op een subpad staat (bijv. `/foodscan-app/`), moet je bij de build `NEXT_PUBLIC_BASE_PATH` zetten op dat pad, anders laden CSS en JS niet.
