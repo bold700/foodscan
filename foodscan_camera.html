@@ -319,6 +319,8 @@ let photoStream = null;
 let photoBase64 = null;
 let barcodeDetected = false;
 let quaggaRunning = false;
+let lastScannedCode = null;
+let scanConfirmCount = 0;
 
 function getApiConfig() {
   const apiKey = (typeof localStorage !== 'undefined' && localStorage.getItem(STORAGE_KEY)) || '';
@@ -431,11 +433,19 @@ function toggleBarcodeCamera() {
 
 async function openBarcodeCamera() {
   barcodeDetected = false;
+  lastScannedCode = null;
+  scanConfirmCount = 0;
   const box = document.getElementById('bc-cam-box');
   const video = document.getElementById('bc-video');
   const status = document.getElementById('bc-status');
   try {
-    bcStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    bcStream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: 'environment',
+        width: { ideal: 1280, min: 640 },
+        height: { ideal: 720, min: 480 }
+      }
+    });
     video.srcObject = bcStream;
     box.style.display = 'block';
     document.getElementById('bc-cam-btn').textContent = 'Camera actief';
@@ -453,23 +463,47 @@ function startQuagga(video) {
   if (quaggaRunning) return;
   quaggaRunning = true;
   Quagga.init({
-    inputStream: { type: 'LiveStream', target: video, constraints: { facingMode: 'environment' } },
-    decoder: { readers: ['ean_reader','ean_8_reader','code_128_reader','upc_reader'] },
+    inputStream: {
+      type: 'LiveStream',
+      target: video,
+      constraints: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
+      area: { top: '15%', right: '15%', left: '15%', bottom: '25%' }
+    },
+    locator: { patchSize: 'medium', halfSample: false },
+    numOfWorkers: 4,
+    decoder: {
+      readers: ['ean_reader', 'ean_8_reader', 'code_128_reader', 'upc_reader'],
+      multiple: false
+    },
     locate: true
-  }, err => {
-    if (!err) Quagga.start();
+  }, function(err) {
+    if (err) {
+      Quagga.init({
+        inputStream: { type: 'LiveStream', target: video, constraints: { facingMode: 'environment' } },
+        decoder: { readers: ['ean_reader', 'ean_8_reader', 'code_128_reader', 'upc_reader'] },
+        locate: true
+      }, function(e) { if (!e) Quagga.start(); });
+      return;
+    }
+    Quagga.start();
   });
-  Quagga.onDetected(data => {
+  Quagga.onDetected(function(data) {
     if (barcodeDetected) return;
-    const code = data.codeResult.code;
-    if (code && code.length >= 8) {
-      barcodeDetected = true;
-      const status = document.getElementById('bc-status');
-      status.textContent = 'Barcode gevonden: ' + code;
-      status.className = 'status-bar detecting';
-      document.getElementById('barcode-field').value = code;
-      stopBarcodeCamera();
-      analyzeBarcode();
+    var code = data.codeResult ? data.codeResult.code : null;
+    if (!code || code.length < 8) return;
+    if (code === lastScannedCode) {
+      scanConfirmCount++;
+      if (scanConfirmCount >= 2) {
+        barcodeDetected = true;
+        document.getElementById('bc-status').textContent = 'Barcode gevonden: ' + code;
+        document.getElementById('bc-status').className = 'status-bar detecting';
+        document.getElementById('barcode-field').value = code;
+        stopBarcodeCamera();
+        analyzeBarcode();
+      }
+    } else {
+      lastScannedCode = code;
+      scanConfirmCount = 1;
     }
   });
 }
