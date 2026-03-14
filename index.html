@@ -151,25 +151,6 @@ body {
   color: var(--color-text-primary);
 }
 .input-row .cam-btn { flex: 0 0 auto; min-width: 72px; white-space: nowrap; }
-.demo-label { margin-bottom: var(--space-xs); font-size: 0.75rem; color: var(--color-text-secondary); }
-.demo-pills { display: flex; flex-wrap: wrap; gap: var(--space-xs); margin-bottom: var(--space-md); }
-.demo-pill {
-  padding: var(--space-xs) var(--space-md);
-  min-height: 36px;
-  box-sizing: border-box;
-  display: inline-flex;
-  align-items: center;
-  border: 1px solid var(--color-border-secondary);
-  border-radius: 999px;
-  font-size: 0.8125rem;
-  color: var(--color-text-secondary);
-  cursor: pointer;
-  background: var(--color-background-secondary);
-  -webkit-tap-highlight-color: transparent;
-  transition: border-color 0.15s ease, color 0.15s ease;
-}
-.demo-pill:hover { border-color: #A8E063; color: var(--color-text-primary); }
-
 .result-card { border: 1px solid var(--color-border-tertiary); border-radius: var(--radius-md); overflow: hidden; margin-bottom: var(--space-md); }
 .result-header { padding: var(--space-md) var(--space-lg); display: flex; align-items: center; gap: var(--space-md); flex-wrap: wrap; }
 .nova-badge { width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.125rem; font-weight: 600; flex-shrink: 0; }
@@ -293,13 +274,6 @@ canvas#capture-canvas { display: none; }
         <input class="barcode-input" id="barcode-field" placeholder="bv. 8718309228874" type="number" />
         <button type="button" class="cam-btn primary btn-zoek" onclick="analyzeBarcode()">Zoek</button>
       </div>
-      <div class="demo-label">Probeer een voorbeeld:</div>
-      <div class="demo-pills">
-        <div class="demo-pill" onclick="loadDemo('8718309228874')">Nutella</div>
-        <div class="demo-pill" onclick="loadDemo('8710400241752')">Activia</div>
-        <div class="demo-pill" onclick="loadDemo('3017620422003')">Lay's</div>
-        <div class="demo-pill" onclick="loadDemo('8718906539853')">Hagelslag</div>
-      </div>
       <div id="barcode-result"></div>
     </div>
 
@@ -414,6 +388,31 @@ async function callAI(prompt, imageBase64) {
     return (data.content && data.content.map(i => i.text || '').join('')) || '';
   }
   return null;
+}
+
+function parseAIJson(text) {
+  if (!text || typeof text !== 'string') throw new Error('Geen antwoord van de AI ontvangen.');
+  var raw = text.trim()
+    .replace(/^```(?:json)?\s*/i, '')
+    .replace(/\s*```\s*$/i, '')
+    .trim();
+  var start = raw.indexOf('{');
+  if (start === -1) {
+    throw new Error('De AI gaf geen JSON terug (alleen tekst). Probeer opnieuw of een andere barcode.');
+  }
+  var depth = 0;
+  var end = -1;
+  for (var i = start; i < raw.length; i++) {
+    if (raw[i] === '{') depth++;
+    else if (raw[i] === '}') { depth--; if (depth === 0) { end = i; break; } }
+  }
+  if (end === -1) raw = raw.slice(start); else raw = raw.slice(start, end + 1);
+  try {
+    return JSON.parse(raw);
+  } catch (e) {
+    var msg = (e && e.message) ? e.message : 'ongeldige JSON';
+    throw new Error('Antwoord kon niet worden gelezen. Probeer opnieuw. [' + String(msg).slice(0, 50) + ']');
+  }
 }
 
 function switchTab(tab) {
@@ -554,11 +553,6 @@ function handleFileUpload(input) {
   reader.readAsDataURL(file);
 }
 
-function loadDemo(barcode) {
-  document.getElementById('barcode-field').value = barcode;
-  analyzeBarcode();
-}
-
 async function analyzeBarcode() {
   const barcode = document.getElementById('barcode-field').value.trim();
   if (!barcode) return;
@@ -575,8 +569,8 @@ async function analyzeBarcode() {
   const ingredients = productData ? (productData.ingredients_text_nl || productData.ingredients_text || '') : '';
   const nova = productData ? (productData.nova_group || '') : '';
   const prompt = productData
-    ? `Analyseer dit voedingsproduct voor een Nederlandse consument:\nProduct: ${name}\nMerk: ${brand}\nIngrediënten: ${ingredients}\nNOVA: ${nova}\n\nGeef ALLEEN JSON (geen markdown):\n{"naam":"...","merk":"...","nova":1-4,"nova_label":"Onbewerkt/Licht bewerkt/Bewerkt/Ultrabewerkt","oordeel":"2-3 zinnen eerlijk oordeel","alternatieven":[{"naam":"...","waar":"AH/Jumbo/online","nova":1}]}`
-    : `Barcode ${barcode} niet gevonden. JSON:\n{"naam":"Onbekend product","merk":"","nova":null,"nova_label":"Niet gevonden","oordeel":"Product niet gevonden in database. Probeer de ingrediënten-tab.","alternatieven":[]}`;
+    ? `Analyseer dit voedingsproduct voor een Nederlandse consument. Antwoord uitsluitend met één JSON-object, geen tekst ervoor of erna, geen markdown.\n\nProduct: ${name}\nMerk: ${brand}\nIngrediënten: ${ingredients}\nNOVA: ${nova}\n\nVerplicht formaat, alleen dit JSON-object:\n{"naam":"...","merk":"...","nova":1-4,"nova_label":"Onbewerkt/Licht bewerkt/Bewerkt/Ultrabewerkt","oordeel":"2-3 zinnen eerlijk oordeel","alternatieven":[{"naam":"...","waar":"AH/Jumbo/online","nova":1}]}`
+    : `Barcode ${barcode} is niet gevonden. Antwoord uitsluitend met dit exacte JSON-object, geen andere tekst:\n{"naam":"Onbekend product","merk":"","nova":null,"nova_label":"Niet gevonden","oordeel":"Product niet gevonden in database. Probeer de ingrediënten-tab.","alternatieven":[]}`;
   const cfg = getApiConfig();
   if (!cfg) {
     el.innerHTML = `<div class="api-missing">Voeg eerst je API-key toe in <a onclick="openSettings()">Instellingen (⚙)</a> om producten te analyseren.</div>`;
@@ -585,7 +579,7 @@ async function analyzeBarcode() {
   el.innerHTML = `<div class="loading"><div class="spinner"></div><div class="loading-text">Analyseren...</div></div>`;
   try {
     const text = await callAI(prompt);
-    const result = JSON.parse(text.replace(/```json|```/g, '').trim());
+    const result = parseAIJson(text);
     history.unshift({ type: 'barcode', barcode, result, time: new Date() });
     el.innerHTML = renderResult(result);
   } catch(e) {
@@ -601,11 +595,11 @@ async function analyzePhoto() {
     el.innerHTML = `<div class="api-missing">Voeg eerst je API-key toe in <a onclick="openSettings()">Instellingen (⚙)</a> om foto's te analyseren.</div>`;
     return;
   }
-  const photoPrompt = `Lees de ingrediëntenlijst en analyseer het product (NOVA 1=onbewerkt, 4=ultrabewerkt). Geef ALLEEN JSON:\n{"naam":"...","merk":"...","nova":1-4,"nova_label":"...","oordeel":"2-3 zinnen","alternatieven":[{"naam":"...","waar":"AH/Jumbo/online","nova":1}]}`;
+  const photoPrompt = `Lees de ingrediëntenlijst en analyseer het product (NOVA 1=onbewerkt, 4=ultrabewerkt). Antwoord uitsluitend met één JSON-object, geen tekst ervoor of erna:\n{"naam":"...","merk":"...","nova":1-4,"nova_label":"...","oordeel":"2-3 zinnen","alternatieven":[{"naam":"...","waar":"AH/Jumbo/online","nova":1}]}`;
   el.innerHTML = `<div class="loading"><div class="spinner"></div><div class="loading-text">Ingrediënten lezen...</div></div>`;
   try {
     const text = await callAI(photoPrompt, photoBase64);
-    const result = JSON.parse(text.replace(/```json|```/g, '').trim());
+    const result = parseAIJson(text);
     history.unshift({ type: 'foto', result, time: new Date() });
     el.innerHTML = renderResult(result);
   } catch(e) {
