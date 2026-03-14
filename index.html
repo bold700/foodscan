@@ -265,9 +265,11 @@ canvas#capture-canvas { display: none; }
         <div class="camera-overlay"><div class="scan-frame"></div><div class="scan-line"></div></div>
       </div>
       <div class="cam-btn-row">
-        <button class="cam-btn primary" id="bc-cam-btn" onclick="toggleBarcodeCamera()">Camera openen</button>
+        <button class="cam-btn primary" id="bc-cam-btn" onclick="toggleBarcodeCamera()">Live scannen</button>
         <button class="cam-btn" id="bc-stop-btn" onclick="stopBarcodeCamera()" style="display:none">Stop camera</button>
+        <button class="cam-btn" onclick="document.getElementById('barcode-photo-input').click()">Foto van barcode</button>
       </div>
+      <input type="file" id="barcode-photo-input" accept="image/*" capture="environment" style="display:none" onchange="handleBarcodePhoto(this)" />
       <div class="status-bar" id="bc-status">Of typ barcode hieronder</div>
       <div class="or">— of —</div>
       <div class="input-row" role="search">
@@ -319,6 +321,8 @@ let photoStream = null;
 let photoBase64 = null;
 let barcodeDetected = false;
 let quaggaRunning = false;
+let lastLiveCode = null;
+let liveCodeCount = 0;
 
 function getApiConfig() {
   const apiKey = (typeof localStorage !== 'undefined' && localStorage.getItem(STORAGE_KEY)) || '';
@@ -431,6 +435,8 @@ function toggleBarcodeCamera() {
 
 async function openBarcodeCamera() {
   barcodeDetected = false;
+  lastLiveCode = null;
+  liveCodeCount = 0;
   const box = document.getElementById('bc-cam-box');
   const video = document.getElementById('bc-video');
   const status = document.getElementById('bc-status');
@@ -438,15 +444,15 @@ async function openBarcodeCamera() {
     bcStream = await navigator.mediaDevices.getUserMedia({
       video: {
         facingMode: 'environment',
-        width: { ideal: 1280, min: 640 },
-        height: { ideal: 720, min: 480 }
+        width: { ideal: 1920, min: 1280 },
+        height: { ideal: 1080, min: 720 }
       }
     });
     video.srcObject = bcStream;
     box.style.display = 'block';
     document.getElementById('bc-cam-btn').textContent = 'Camera actief';
     document.getElementById('bc-stop-btn').style.display = 'block';
-    status.textContent = 'Richt op een barcode...';
+    status.textContent = 'Houd de barcode stil in het groene kader...';
     status.className = 'status-bar detecting';
     video.onloadedmetadata = () => startQuagga(video);
   } catch(e) {
@@ -462,10 +468,10 @@ function startQuagga(video) {
     inputStream: {
       type: 'LiveStream',
       target: video,
-      constraints: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
-      area: { top: '15%', right: '15%', left: '15%', bottom: '25%' }
+      constraints: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } },
+      area: { top: '20%', right: '15%', left: '15%', bottom: '30%' }
     },
-    locator: { patchSize: 'medium', halfSample: false },
+    locator: { patchSize: 'large', halfSample: false },
     numOfWorkers: 4,
     decoder: {
       readers: ['ean_reader', 'ean_8_reader', 'code_128_reader', 'upc_reader'],
@@ -487,12 +493,20 @@ function startQuagga(video) {
     if (barcodeDetected) return;
     var code = data.codeResult ? data.codeResult.code : null;
     if (!code || code.length < 8) return;
-    barcodeDetected = true;
-    document.getElementById('bc-status').textContent = 'Barcode gevonden: ' + code;
-    document.getElementById('bc-status').className = 'status-bar detecting';
-    document.getElementById('barcode-field').value = code;
-    stopBarcodeCamera();
-    analyzeBarcode();
+    if (code === lastLiveCode) {
+      liveCodeCount++;
+      if (liveCodeCount >= 2) {
+        barcodeDetected = true;
+        document.getElementById('bc-status').textContent = 'Barcode gevonden: ' + code;
+        document.getElementById('bc-status').className = 'status-bar detecting';
+        document.getElementById('barcode-field').value = code;
+        stopBarcodeCamera();
+        analyzeBarcode();
+      }
+    } else {
+      lastLiveCode = code;
+      liveCodeCount = 1;
+    }
   });
 }
 
@@ -500,12 +514,92 @@ function stopBarcodeCamera() {
   if (quaggaRunning) { try { Quagga.stop(); } catch(e) {} quaggaRunning = false; }
   if (bcStream) { bcStream.getTracks().forEach(t => t.stop()); bcStream = null; }
   document.getElementById('bc-cam-box').style.display = 'none';
-  document.getElementById('bc-cam-btn').textContent = 'Camera openen';
+  document.getElementById('bc-cam-btn').textContent = 'Live scannen';
   document.getElementById('bc-stop-btn').style.display = 'none';
   if (!barcodeDetected) {
     document.getElementById('bc-status').textContent = 'Of typ barcode hieronder';
     document.getElementById('bc-status').className = 'status-bar';
   }
+}
+
+function handleBarcodePhoto(input) {
+  var file = input.files && input.files[0];
+  if (!file) return;
+  input.value = '';
+  var status = document.getElementById('bc-status');
+  status.textContent = 'Barcode uit foto lezen...';
+  status.className = 'status-bar detecting';
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var img = new Image();
+    img.onload = function() {
+      var maxSize = 1200;
+      var w = img.width, h = img.height;
+      if (w > maxSize || h > maxSize) {
+        if (w > h) { h = Math.round(h * maxSize / w); w = maxSize; }
+        else { w = Math.round(w * maxSize / h); h = maxSize; }
+      }
+      var canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      var ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      var dataUrl = canvas.toDataURL('image/png');
+      var decoderConfig = { readers: ['ean_reader', 'ean_8_reader', 'code_128_reader', 'upc_reader'] };
+      function tryDecode(src, locate, done) {
+        Quagga.decodeSingle({
+          src: src,
+          decoder: decoderConfig,
+          locate: locate
+        }, function(result) {
+          if (result && result.codeResult && result.codeResult.code && result.codeResult.code.length >= 8) {
+            done(result.codeResult.code);
+            return;
+          }
+          done(null);
+        });
+      }
+      tryDecode(dataUrl, true, function(code) {
+        if (code) {
+          document.getElementById('barcode-field').value = code;
+          status.textContent = 'Barcode gevonden: ' + code;
+          analyzeBarcode();
+          return;
+        }
+        tryDecode(dataUrl, false, function(code2) {
+          if (code2) {
+            document.getElementById('barcode-field').value = code2;
+            status.textContent = 'Barcode gevonden: ' + code2;
+            analyzeBarcode();
+            return;
+          }
+          ctx.clearRect(0, 0, w, h);
+          ctx.save();
+          ctx.translate(w / 2, h / 2);
+          ctx.rotate(Math.PI);
+          ctx.translate(-w / 2, -h / 2);
+          ctx.drawImage(img, 0, 0, w, h);
+          ctx.restore();
+          tryDecode(canvas.toDataURL('image/png'), true, function(code3) {
+            if (code3) {
+              document.getElementById('barcode-field').value = code3;
+              status.textContent = 'Barcode gevonden: ' + code3;
+              analyzeBarcode();
+            } else {
+              status.textContent = 'Geen barcode gevonden op de foto. Probeer opnieuw of typ de code.';
+              status.className = 'status-bar error';
+            }
+          });
+        });
+      });
+    };
+    img.onerror = function() {
+      status.textContent = 'Foto kon niet worden geladen. Probeer een andere afbeelding.';
+      status.className = 'status-bar error';
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
 }
 
 async function openPhotoCamera() {
